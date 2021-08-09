@@ -12,7 +12,7 @@ The required folder and dataset structure are:
     └───raw
 </pre>
 
-You'll need to populate the raw folder with a bunch of source images.
+You'll need to populate the raw folder with a bunch of source images. In our initial experiments, we used the Sharp subset of the [Blur dataset](https://www.kaggle.com/kwentar/blur-dataset "Blur dataset").
 
 ##### dirtify
 To experiment with the Cleanify project, set your working directory to the source folder and run the dirtify tool. Then run the cleanify tool. Here are some examples:

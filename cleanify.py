@@ -100,8 +100,8 @@ class CleanerCNN(nn.Module):
         self.conv3 = nn.Conv2d(32,  3, kernel_size=5, padding=2)
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
+        x = F.leaky_relu(self.conv1(x))
+        x = F.leaky_relu(self.conv2(x))
         x = self.conv3(x)
 
         return x

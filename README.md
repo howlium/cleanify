@@ -19,6 +19,7 @@ To experiment with the Cleanify project, set your working directory to the sourc
 
 `dirtify --jpeg 50` (compresses with JPEG at 50% quality, then decompresses)</br>
 `dirtify --blur 5` (performs a Gaussian blur with a 5-pixel radius)</br>
+`dirtify --noise 25` (renders 25% uniform noise on image)</br>
 `dirtify --invert` (inverts the pixels)</br>
 `dirtify --xout` (draws a dark red 1-pixel-wide "X" through the image)</br>
 `dirtify -j 80 -b 3 -i -x` (Does a little of everything)</br>

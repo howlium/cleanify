@@ -12,9 +12,11 @@ out_h = 64
 # construct the argument parser
 parser = argparse.ArgumentParser(description = "Filter a clean image, output a dirty one")
 parser.add_argument("-j", "--jpeg", type=int,
-                    help="JPEG-compress with quality % and decompress")
+                    help="JPEG-compress with quality (0-100%) and decompress")
 parser.add_argument("-b", "--blur", type=int,
                     help="Gaussian blur with [odd] pixel radius")
+parser.add_argument("-n", "--noise", type=float,
+                    help="add noise (0-400%)")
 parser.add_argument("-x", "--xout", action="store_true",
                     help="draw a dark red 1-pixel-thick X over the image")
 parser.add_argument("-i", "--invert", action="store_true",
@@ -28,6 +30,9 @@ if args.jpeg is not None and (args.jpeg < 0 or args.jpeg > 100):
     abort = True
 if args.blur is not None and args.blur != 0 and args.blur % 2 == 0:
     print("blur radius must be odd")
+    abort = True
+if args.noise is not None and (args.noise < 0 or args.noise > 400):
+    print("Noise % must be between 0 and 400")
     abort = True
 if abort:
     sys.exit()
@@ -82,10 +87,24 @@ for i, img in tqdm(enumerate(images), total=len(images)):
         result, jpeg_bytes = cv2.imencode('.jpg', dirty, encode_param)
         dirty = cv2.imdecode(jpeg_bytes, cv2.IMREAD_COLOR)
 
+    if args.noise is not None:
+        # Mix 3 channels of simple noise over the image
+        h, w, d = dirty.shape[0], dirty.shape[1], dirty.shape[2]
+        noise_img = np.random.rand(h,w,d) * 255
+        mask_img = np.random.rand(h,w,d)
+        for y in range(h):
+            for x in range(w):
+                for c in range(d):
+                    if args.noise <= 100:
+                        alpha = mask_img[y,x,c] * (args.noise / 100.0) # Linear up to 100%
+                    else:
+                        alpha = mask_img[y,x,c] ** (100.0 / args.noise) # Curved above 100%
+                    dirty[y,x,c] = alpha * noise_img[y,x,c] + (1 - alpha) * dirty[y,x,c]
+        
     if args.blur is not None:
         # Apply Gaussian Blur with given pixel radius
         dirty = cv2.GaussianBlur(dirty, (args.blur, args.blur), 0)
-
+        
     if args.xout:
         # Draw a dark red X through the image
         cv2.line(dirty, (0,0    ), (out_w,out_h), (0,0,64), 1)

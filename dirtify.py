@@ -32,10 +32,11 @@ if args.blur is not None and args.blur != 0 and args.blur % 2 == 0:
 if abort:
     sys.exit()
 
-# Given a bunch of larger images in the "input/raw", we'll:
+# Directories
+# Given a bunch of larger images in the ../input/raw:
 # (1) scale and crop to a small, square, manageable thumbnail size
 # (2) save that into ../input/clean
-# (3) add a perturbation
+# (3) add the requested perturbation
 # (4) save that into ../input/dirty
 
 os.makedirs('../input/dirty', exist_ok=True)
@@ -44,6 +45,7 @@ raw_dir = '../input/raw'
 clean_dir = '../input/clean'
 dirty_dir = '../input/dirty'
 
+# Iterate through files in ../input/raw
 images = os.listdir(raw_dir)
 if '.DS_Store' in images:
     images.remove('.DS_Store') # For macOS: Skip invisible Desktop Services Store file.
@@ -74,15 +76,15 @@ for i, img in tqdm(enumerate(images), total=len(images)):
         # Invert the image
         dirty = 255 - dirty
 
-    if args.jpeg != 100:
-        # Compress with JPEG at 20% quality, then uncompress
+    if args.jpeg is not None:
+        # Compress with JPEG at given quality, then uncompress
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), args.jpeg]
         result, jpeg_bytes = cv2.imencode('.jpg', dirty, encode_param)
         dirty = cv2.imdecode(jpeg_bytes, cv2.IMREAD_COLOR)
 
-    if args.blur != 0:
+    if args.blur is not None:
         # Apply Gaussian Blur with given pixel radius
-        dirty = cv2.GaussianBlur(dirty, (9, 9), 0)
+        dirty = cv2.GaussianBlur(dirty, (args.blur, args.blur), 0)
 
     if args.xout:
         # Draw a dark red X through the image

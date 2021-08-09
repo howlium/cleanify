@@ -49,3 +49,6 @@ The results will appear in a new output folder.
 └───output
     └───saved_images
 </pre>
+
+### History
+This project was derived from Sovit Ranjan Rath's tutorial, [Image Deblurring using Convolutional Neural Networks and Deep Learning](https://debuggercafe.com/image-deblurring-using-convolutional-neural-networks-and-deep-learning "Tutorial") and his original [GitHub repository](https://github.com/sovit-123/image-deblurring-using-deep-learning "Repo").

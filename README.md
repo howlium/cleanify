@@ -35,7 +35,7 @@ The `dirtify` process will create new sibling folders beside raw:
 
 ##### cleanify
 `cleanify` (by default, applies 40 epochs)</br>
-`cleanify --epochs 100` (but you can choose a different number)</br>
+`cleanify --epochs 100` (you can specify a number of epochs)</br>
 
 The results will appear in a new output folder.
 <pre>

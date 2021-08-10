@@ -1,21 +1,21 @@
 import numpy as np
-import os
+import os # OS module in Python 
 import matplotlib.pyplot as plt
-import glob
-import cv2
-import torch
-import torchvision
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+import glob # Unix style pathname pattern expansion
+import cv2 # OpenCV has four functions for blurring
+import torch # PyTorch provides tensor computation and deep neural networks 
+import torchvision # popular datasets, model architectures, and image transformations for computer vision
+import torch.nn as nn # Neural Network layers
+import torch.nn.functional as F # NN functions
+import torch.optim as optim  # Optimization algorithms
 import time
-import argparse
+import argparse # Parser for command-line options, arguments and sub-commands
 
-from tqdm import tqdm
-from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import transforms
-from torchvision.utils import save_image
-from sklearn.model_selection import train_test_split
+from tqdm import tqdm # Progress bar
+from torch.utils.data import Dataset, DataLoader # Dataset stors samples and their labels, Loader wraps an iterable around the dataset
+from torchvision.transforms import transforms # Common image transformations
+from torchvision.utils import save_image # Save a given Tensor into an image file
+from sklearn.model_selection import train_test_split # Split arrays or matrices into random train and test subsets
 
 # construct the argument parser
 parser = argparse.ArgumentParser()

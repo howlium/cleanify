@@ -146,13 +146,14 @@ class CleanerCNN(nn.Module):
         # Other parameter for Conv2d() are stride, padding_mode, dilation, groups, and bias.
         self.conv1 = nn.Conv2d(3,  64, kernel_size=9, padding=4, bias=True)
         self.conv2 = nn.Conv2d(64, 32, kernel_size=5, padding=2, bias=True)
-        self.conv2 = nn.Conv2d(32, 16, kernel_size=1, padding=0, bias=True)
-        self.conv3 = nn.Conv2d(32,  3, kernel_size=5, padding=2)
+        self.conv3 = nn.Conv2d(32, 16, kernel_size=1, padding=0, bias=True)
+        self.conv4 = nn.Conv2d(32,  3, kernel_size=5, padding=2)
 
     def forward(self, x):
         x = F.leaky_relu(self.conv1(x))
         x = F.leaky_relu(self.conv2(x))
-        x = self.conv3(x)
+        x = F.leaky_relu(self.conv3(x))
+        x = self.conv4(x)
 
         return x
 

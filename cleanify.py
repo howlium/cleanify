@@ -6,7 +6,7 @@ import cv2 # OpenCV has four functions for blurring
 import torch # PyTorch provides tensor computation and deep neural networks 
 import torchvision # popular datasets, model architectures, and image transformations for computer vision
 import torch.nn as nn # Neural Network layers
-import torch.nn.functional as F # NN functions
+import torch.nn.functional as F # NN functions. Used in CleanerCNN class for loss function
 import torch.optim as optim  # Optimization algorithms
 import time
 import argparse # Parser for command-line options, arguments and sub-commands
@@ -29,6 +29,7 @@ args = vars(parser.parse_args())
 # Save a tensor into an image file with PyTorch
 def save_decoded_image(img, name):
     # view() returns a new tensor with the same data but different shape
+    # size(0) returns the first dimension of the tensor img
     img = img.view(img.size(0), 3, 224, 224)
     save_image(img, name)
 
@@ -71,18 +72,23 @@ y_clean = []
 for i in range(len(clean_files)):
     y_clean.append(clean_files[i])
 
-# 
+# Split arrays or matrices into random train and test subsets
 (x_train, x_val, y_train, y_val) = train_test_split(x_dirty, y_clean, test_size=0.25)
 print(f"Train data instances: {len(x_train)}")
 print(f"Validation data instances: {len(x_val)}")
 
-# define transforms
+# Use Torchvision Compose() to combine transforms into one call
+# ToPILImage makes a Pillow image
 transform = transforms.Compose([
     transforms.ToPILImage(),
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
 ])
 
+# CleanDataset class reads in images, applies transforms if entered, and returns them
+# Will do for dirty set, and also clean set if clean_paths is entered
+# In use, it saves as a tensor a pillow image of size 224 x 224
+# and does that to all training and validation sets: original and blurred
 class CleanDataset(Dataset):
     def __init__(self, dirty_paths, clean_paths=None, transforms=None):
         self.X = dirty_paths
@@ -105,15 +111,39 @@ class CleanDataset(Dataset):
         else:
             return dirty_image
 
+# Format the images by creating two CleanDataset class instances
 train_data = CleanDataset(x_train, y_train, transform)
 val_data = CleanDataset(x_val, y_val, transform)
  
+# Load the training and validation datasets, and shuffle
+# Each dataset has a batch size of 2, one for original the other for blurred
 trainloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 valloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
+# The Convolutional Neural Network
+# Performs the convolutions and activations in the order CRCRC
 class CleanerCNN(nn.Module):
+
     def __init__(self):
         super(CleanerCNN, self).__init__()
+
+        # NB: torch.nn.Conv2d is different than torch.nn.functional.Conv2d
+        # Parameters entered are in_channels=3, one for each: RGB,
+        # out_channels=64,
+        # the kernel is 9x9,
+        # padding is 2 for both height and width.
+        # So the filter for this convolution is a tensor shaped 9 x 9 x 3 x 64
+        # In other words, 64 filters get applied to each of points in the 9x9 kernel,
+        # over all 3 layers.
+        # By convention, padding would be (k - 1)/2, so 
+        # for k=9, padding=4
+        # for k=1, padding=0
+        # for k=5, padding=2
+        # One output is produced per filter. 
+        # The pixel value is multiplied by the filter's kernel's pixel value, then added
+        # across the kernel, and added across the filters to produce a single value
+        # for each pixel of the original (single layer) image for each channel layer.
+        # Other parameter for Conv2d() are stride, padding_mode, dilation, groups, and bias.
         self.conv1 = nn.Conv2d(3,  64, kernel_size=9, padding=2)
         self.conv2 = nn.Conv2d(64, 32, kernel_size=1, padding=2)
         self.conv3 = nn.Conv2d(32,  3, kernel_size=5, padding=2)
@@ -127,6 +157,7 @@ class CleanerCNN(nn.Module):
 
 model = CleanerCNN().to(device)
 print(model)
+quit()
 
 # the loss function
 criterion = nn.MSELoss()

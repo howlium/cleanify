@@ -14,31 +14,48 @@ import argparse # Parser for command-line options, arguments and sub-commands
 from tqdm import tqdm # Progress bar
 from torch.utils.data import Dataset, DataLoader # Dataset stors samples and their labels, Loader wraps an iterable around the dataset
 from torchvision.transforms import transforms # Common image transformations
-from torchvision.utils import save_image # Save a given Tensor into an image file
+from torchvision.utils import save_image # Save a given tensor into an image file
 from sklearn.model_selection import train_test_split # Split arrays or matrices into random train and test subsets
 
-# construct the argument parser
+# Construct the argument parser
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--epochs', type=int, default=40,
             help='number of epochs to train the model for')
+# vars returns a _dict_ that is an attribute of the object created by parse_args()
 args = vars(parser.parse_args())
 
-# helper functions
+
+# Helper function
+# Save a tensor into an image file with PyTorch
 def save_decoded_image(img, name):
+    # view() returns a new tensor with the same data but different shape
     img = img.view(img.size(0), 3, 224, 224)
     save_image(img, name)
-    
+
+
+# Make strings for directories
 input_dir  = '../input'
 output_dir = '../output'
 image_dir  = output_dir + '/saved_images'
+
+# Make the image directory, if it already exists no FileExistsError will be raised
 os.makedirs(image_dir, exist_ok=True)
+
+# Make a string for device depending on whether the system supports CUDA
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 print(device)
+
+# Used in trainloader and valloader, then by dataloader
+# Would be nice to change this name cause it's the same as the arg name
 batch_size = 2
 
+# Make a list of the names of the entries in the 'dirty' directory
 dirty_files = os.listdir(f'{input_dir}/dirty')
+
+# Remove .DS_Store and sort the files
+# For macOS: Skip invisible Desktop Services Store file.
 if '.DS_Store' in dirty_files:
-    dirty_files.remove('.DS_Store') # For macOS: Skip invisible Desktop Services Store file.
+    dirty_files.remove('.DS_Store') 
 dirty_files.sort()
 
 clean_files = os.listdir(f'{input_dir}/clean')
@@ -46,6 +63,7 @@ if '.DS_Store' in clean_files:
     clean_files.remove('.DS_Store') # For macOS: Skip invisible Desktop Services Store file.
 clean_files.sort()
 
+# Make lists of each set -- dirty and clean images
 x_dirty = []
 for i in range(len(dirty_files)):
     x_dirty.append(dirty_files[i])
@@ -53,6 +71,7 @@ y_clean = []
 for i in range(len(clean_files)):
     y_clean.append(clean_files[i])
 
+# 
 (x_train, x_val, y_train, y_val) = train_test_split(x_dirty, y_clean, test_size=0.25)
 print(f"Train data instances: {len(x_train)}")
 print(f"Validation data instances: {len(x_val)}")

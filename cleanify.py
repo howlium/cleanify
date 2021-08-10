@@ -121,7 +121,7 @@ trainloader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 valloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
 
 # The Convolutional Neural Network
-# Performs the convolutions and activations in the order CRCRC
+# Performs the convolutions and activations in the order CRCRF
 class CleanerCNN(nn.Module):
 
     def __init__(self):
@@ -157,7 +157,6 @@ class CleanerCNN(nn.Module):
 
 model = CleanerCNN().to(device)
 print(model)
-quit()
 
 # the loss function
 criterion = nn.MSELoss()

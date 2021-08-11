@@ -144,7 +144,7 @@ class CleanerCNN(nn.Module):
         # across the kernel, and added across the filters to produce a single value
         # for each pixel of the original (single layer) image for each channel layer.
         # Other parameter for Conv2d() are stride, padding_mode, dilation, groups, and bias.
-        # It looks like conv2 is a bottleneck module?:w
+        # It looks like conv2 is a bottleneck module?
         self.conv1 = nn.Conv2d(3,  64, kernel_size=9, padding=4, bias=True)
         self.conv2 = nn.Conv2d(64, 32, kernel_size=1, padding=0, bias=True)
         self.conv3 = nn.Conv2d(32,  3, kernel_size=5, padding=2)

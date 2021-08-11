@@ -151,6 +151,7 @@ class CleanerCNN(nn.Module):
         # self.conv3 = nn.Conv2d(32, 16, kernel_size=1, padding=0, bias=True)
         # self.conv4 = nn.Conv2d(16,  3, kernel_size=5, padding=2)
 
+    # overrides Module class's forward()
     def forward(self, x):
         x = F.leaky_relu(self.conv1(x))
         x = F.leaky_relu(self.conv2(x))
@@ -160,13 +161,18 @@ class CleanerCNN(nn.Module):
 
         return x
 
+# to() moves and/or casts the parameters and buffers
+# device is cpu or cuda:0
+# returns self
 model = CleanerCNN().to(device)
 print(model)
 
-# the loss function
+# the loss function: Mean Squared Error
 criterion = nn.MSELoss()
 
-# the optimizer
+# the optimizer holds the current state and updates the parameters
+# lr is learning rate
+# Adam is proposed in https://arxiv.org/abs/1412.6980
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,

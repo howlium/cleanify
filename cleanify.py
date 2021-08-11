@@ -27,6 +27,7 @@ args = vars(parser.parse_args())
 
 # Helper function
 # Save a tensor into an image file with PyTorch
+# Gets called in validate()
 def save_decoded_image(img, name):
     # view() returns a new tensor with the same data but different shape
     # size(0) returns the first dimension of the tensor img
@@ -187,6 +188,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 
 # This function doesn't use the arg epoch. Can we delete it?
 # Run through all the data once, returning the training loss for the epoch
+# Called once per epoch with the training data set passed in as dataloader
 def fit(model, dataloader, epoch):
 
     # Set the model in training mode
@@ -212,51 +214,85 @@ def fit(model, dataloader, epoch):
         # backpropagation
         loss.backward()
 
-        # update the parameters
+        # update the parameters and keep track of the total loss
         optimizer.step()
         running_loss += loss.item()
     
+    # Average the loss for this epoch and return it
     train_loss = running_loss/len(dataloader.dataset)
     print(f"Train Loss: {train_loss:.5f}")
-    
+
     return train_loss
 
 
-
+# How's training going for this epoch
+# Called once per epoch with the validation set passed in as dataloader
 def validate(model, dataloader, epoch):
+
+    # Set the module in evaluation mode
     model.eval()
     running_loss = 0.0
+
+    # no_grad disables gradient calculation to reduce memory consumption
     with torch.no_grad():
+
+        # Use the progress bar
         for i, data in tqdm(enumerate(dataloader), total=int(len(val_data)/dataloader.batch_size)):
             dirty_image = data[0]
             clean_image = data[1]
             dirty_image = dirty_image.to(device)
             clean_image = clean_image.to(device)
+
+            # Pass the dirty image into the model
+            # and compare with the clean image using MSE to get loss
             outputs = model(dirty_image)
             loss = criterion(outputs, clean_image)
+
+            # Update the running loss
             running_loss += loss.item()
+
+            # If finishing the first epoch save the clean and dirty image
+            # for example: output/saved_images/clean<epoch#>.png
             if epoch == 0 and i == int((len(val_data)/dataloader.batch_size)-1):
                 save_decoded_image(clean_image.cpu().data, name=f"{image_dir}/clean{epoch}.png")
                 save_decoded_image(dirty_image.cpu().data, name=f"{image_dir}/dirty{epoch}.png")
+            
+            # Save the last clean and dirty image pair into outputs directory at the end of each epoch
             if i == int((len(val_data)/dataloader.batch_size)-1):
                 save_decoded_image(outputs.cpu().data, name=f"{image_dir}/cleaned{epoch}.png")
+        
+        # Calculate the average loss for this epoch and return it
         val_loss = running_loss/len(dataloader.dataset)
         print(f"Val Loss: {val_loss:.5f}")
         
         return val_loss
 
 
-
+# Record the training and validation losses for all the epochs
 train_loss  = []
 val_loss = []
+
+# How long is this going to take
 start = time.time()
+
+# Train the model and check against the validation set at each epoch
 for epoch in range(args['epochs']):
     print(f"Epoch {epoch+1} of {args['epochs']}")
+
+    # Train on the clean and dirty images in the training set
     train_epoch_loss = fit(model, trainloader, epoch)
+
+    # Validate on the clean and dirty images in the validation set
     val_epoch_loss = validate(model, valloader, epoch)
+
+    # Record average loss for the training and validation sets
     train_loss.append(train_epoch_loss)
     val_loss.append(val_epoch_loss)
+
+    # Adjust the learning rate
     scheduler.step(val_epoch_loss)
+
+# Stop the watch and report
 end = time.time()
 print(f"Took {((end-start)/60):.3f} minutes to train")
 

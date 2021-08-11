@@ -174,6 +174,8 @@ criterion = nn.MSELoss()
 # lr is learning rate
 # Adam is proposed in https://arxiv.org/abs/1412.6980
 optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Reduce the learning rate based on how training is going
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
@@ -182,19 +184,34 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         verbose=True
     )
     
+
+# This function doesn't use the arg epoch. Can we delete it?
+# Run through all the data once, returning the training loss for the epoch
 def fit(model, dataloader, epoch):
+
+    # Set the model in training mode
     model.train()
     running_loss = 0.0
+
+    # i doesn't get used in this for loop
+    # tqdm wraps around an interable to make a progress bar
     for i, data in tqdm(enumerate(dataloader), total=int(len(train_data)/dataloader.batch_size)):
         dirty_image = data[0]
         clean_image = data[1]
         dirty_image = dirty_image.to(device)
         clean_image = clean_image.to(device)
+
+        # Set the gradients of all optimized torch Tensors to zero
         optimizer.zero_grad()
+
+        # Pass every dirty image into the model, 
+        # and compare with the clean image using MSE to get loss
         outputs = model(dirty_image)
         loss = criterion(outputs, clean_image)
+
         # backpropagation
         loss.backward()
+
         # update the parameters
         optimizer.step()
         running_loss += loss.item()
@@ -203,7 +220,9 @@ def fit(model, dataloader, epoch):
     print(f"Train Loss: {train_loss:.5f}")
     
     return train_loss
-    
+
+
+
 def validate(model, dataloader, epoch):
     model.eval()
     running_loss = 0.0
@@ -225,7 +244,9 @@ def validate(model, dataloader, epoch):
         print(f"Val Loss: {val_loss:.5f}")
         
         return val_loss
-        
+
+
+
 train_loss  = []
 val_loss = []
 start = time.time()

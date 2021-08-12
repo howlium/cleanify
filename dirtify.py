@@ -5,6 +5,7 @@ from tqdm import tqdm
 from io import StringIO
 import argparse
 import sys
+import random
 
 out_w = 64
 out_h = 64
@@ -15,10 +16,14 @@ parser.add_argument("-j", "--jpeg", type=int,
                     help="JPEG-compress with quality (0-100%) and decompress")
 parser.add_argument("-b", "--blur", type=int,
                     help="Gaussian blur with [odd] pixel radius")
+parser.add_argument("-r", "--rblur", type=int,
+                    help="radial blur with given iteration count (0-10")
 parser.add_argument("-n", "--noise", type=float,
                     help="add noise (0-400%)")
 parser.add_argument("-x", "--xout", action="store_true",
                     help="draw a dark red 1-pixel-thick X over the image")
+parser.add_argument("-p", "--plus", action="store_true",
+                    help="draw white horizontal and vertical lines at random positions")
 parser.add_argument("-i", "--invert", action="store_true",
                     help="invert the image")
 args = parser.parse_args()
@@ -105,10 +110,30 @@ for i, img in tqdm(enumerate(images), total=len(images)):
         # Apply Gaussian Blur with given pixel radius
         dirty = cv2.GaussianBlur(dirty, (args.blur, args.blur), 0)
         
+    if args.rblur is not None:
+        radius = 0.01
+
+        growMapx = np.abs(np.tile(np.arange(out_h) + ((np.arange(out_h) - mid_w) * radius), (out_w, 1)).astype(np.float32))
+        shrinkMapx = np.abs(np.tile(np.arange(out_h) - ((np.arange(out_h) - mid_w) * radius), (out_w, 1)).astype(np.float32))
+        growMapy = np.abs(np.tile(np.arange(out_w) + ((np.arange(out_w) - mid_h) * radius), (out_h, 1)).transpose().astype(np.float32))
+        shrinkMapy = np.abs(np.tile(np.arange(out_w) - ((np.arange(out_w) - mid_h) * radius), (out_h, 1)).transpose().astype(np.float32))
+        
+        for i in range(args.rblur):
+            tmp1 = cv2.remap(dirty, growMapx, growMapy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            tmp2 = cv2.remap(dirty, shrinkMapx, shrinkMapy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            dirty = cv2.addWeighted(tmp1, 0.5, tmp2, 0.5, 0)
+    
+    if args.plus:
+        # superimpose a white plus at a random position
+        x = round(random.random() * out_w)
+        y = round(random.random() * out_h)
+        cv2.line(dirty, (0,y), (out_w, y), (255,255,255), 1)
+        cv2.line(dirty, (x,0), (x, out_h), (255,255,255), 1)
+    
     if args.xout:
         # Draw a dark red X through the image
-        cv2.line(dirty, (0,0    ), (out_w,out_h), (0,0,64), 1)
-        cv2.line(dirty, (0,out_h), (out_w,0    ), (0,0,64), 1)
+        cv2.line(dirty, (0,0    ), (out_w,out_h), (0,0,64), 2)
+        cv2.line(dirty, (0,out_h), (out_w,0    ), (0,0,64), 2)
     
     cv2.imwrite(f"{dirty_dir}/{out_name}", dirty)
     

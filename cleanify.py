@@ -21,11 +21,13 @@ from sklearn.model_selection import train_test_split
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--epochs', type=int, default=40,
             help='number of epochs to train the model for')
+parser.add_argument("-a", "--autoencoder", action="store_true",
+            help="Use an autoencoder NN instead of a vanilla CNN")
 args = vars(parser.parse_args())
 
 # helper functions
 def save_decoded_image(img, name):
-    img = img.view(img.size(0), 3, 224, 224)
+    img = img.view(img.size(0), 3, 64, 64)
     save_image(img, name)
     
 input_dir  = '../input'
@@ -60,7 +62,7 @@ print(f"Validation data instances: {len(x_val)}")
 # define transforms
 transform = transforms.Compose([
     transforms.ToPILImage(),
-    transforms.Resize((224, 224)),
+    transforms.Resize((64, 64)),
     transforms.ToTensor(),
 ])
 
@@ -95,14 +97,44 @@ valloader = DataLoader(val_data, batch_size=batch_size, shuffle=False)
 class CleanerCNN(nn.Module):
     def __init__(self):
         super(CleanerCNN, self).__init__()
-        self.conv1 = nn.Conv2d(3,  64, kernel_size=9, padding=2)
-        self.conv2 = nn.Conv2d(64, 32, kernel_size=1, padding=2)
-        self.conv3 = nn.Conv2d(32,  3, kernel_size=5, padding=2)
+
+        if args["autoencoder"]:
+            # encoder
+            self.enc1 = nn.Linear(in_features=1024, out_features=256)
+            self.enc2 = nn.Linear(in_features=256, out_features=128)
+            self.enc3 = nn.Linear(in_features=128, out_features=64)
+            self.enc4 = nn.Linear(in_features=64, out_features=32)
+            self.enc5 = nn.Linear(in_features=32, out_features=16)
+            # decoder
+            self.dec1 = nn.Linear(in_features=16, out_features=32)
+            self.dec2 = nn.Linear(in_features=32, out_features=64)
+            self.dec3 = nn.Linear(in_features=64, out_features=128)
+            self.dec4 = nn.Linear(in_features=128, out_features=256)
+            self.dec5 = nn.Linear(in_features=256, out_features=1024)
+        else:
+            self.conv1 = nn.Conv2d(3,  64, kernel_size = 5, padding="same")
+            self.conv2 = nn.Conv2d(64, 32, kernel_size = (8,1), padding="same")
+            self.conv3 = nn.Conv2d(32, 16, kernel_size = (1,8), padding="same")
+            self.conv4 = nn.Conv2d(16,  3, kernel_size = 5, padding="same")
 
     def forward(self, x):
-        x = F.leaky_relu(self.conv1(x))
-        x = F.leaky_relu(self.conv2(x))
-        x = self.conv3(x)
+        if args["autoencoder"]:
+            x = F.relu(self.enc1(x))
+            x = F.relu(self.enc2(x))
+            x = F.relu(self.enc3(x))
+            x = F.relu(self.enc4(x))
+            x = F.relu(self.enc5(x))
+
+            x = F.relu(self.dec1(x))
+            x = F.relu(self.dec2(x))
+            x = F.relu(self.dec3(x))
+            x = F.relu(self.dec4(x))
+            x = F.relu(self.dec5(x))
+        else:
+            x = F.leaky_relu(self.conv1(x))
+            x = F.leaky_relu(self.conv2(x))
+            x = F.leaky_relu(self.conv3(x))
+            x = self.conv4(x)
 
         return x
 

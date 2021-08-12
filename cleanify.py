@@ -26,17 +26,6 @@ parser.add_argument("-a", "--autoencoder", action="store_true",
 # vars returns a _dict_ that is an attribute of the object created by parse_args()
 args = vars(parser.parse_args())
 
-
-# Helper function
-# Save a tensor into an image file with PyTorch
-# Gets called in validate()
-def save_decoded_image(img, name):
-    # view() returns a new tensor with the same data but different shape
-    # size(0) returns the first dimension of the tensor img
-    img = img.view(img.size(0), 3, 64, 64)
-    save_image(img, name)
-
-
 # Make strings for directories
 input_dir  = '../input'
 output_dir = '../output'
@@ -84,7 +73,6 @@ print(f"Validation data instances: {len(x_val)}")
 # ToPILImage makes a Pillow image
 transform = transforms.Compose([
     transforms.ToPILImage(),
-    transforms.Resize((64, 64)),
     transforms.ToTensor(),
 ])
 
@@ -132,17 +120,16 @@ class CleanerCNN(nn.Module):
 
         if args["autoencoder"]:
             # encoder
-            self.enc1 = nn.Linear(in_features=1024, out_features=256)
-            self.enc2 = nn.Linear(in_features=256, out_features=128)
-            self.enc3 = nn.Linear(in_features=128, out_features=64)
-            self.enc4 = nn.Linear(in_features=64, out_features=32)
-            self.enc5 = nn.Linear(in_features=32, out_features=16)
+            self.enc1 = nn.Linear(in_features=64, out_features=128)
+            self.enc2 = nn.Linear(in_features=128, out_features=64)
+            self.enc3 = nn.Linear(in_features=64, out_features=32)
+            self.enc4 = nn.Linear(in_features=32, out_features=16)
             # decoder
             self.dec1 = nn.Linear(in_features=16, out_features=32)
             self.dec2 = nn.Linear(in_features=32, out_features=64)
             self.dec3 = nn.Linear(in_features=64, out_features=128)
-            self.dec4 = nn.Linear(in_features=128, out_features=256)
-            self.dec5 = nn.Linear(in_features=256, out_features=1024)
+            self.dec4 = nn.Linear(in_features=128, out_features=64)
+
         else:
             # NB: torch.nn.Conv2d is different than torch.nn.functional.Conv2d
             # Parameters entered are in_channels=3, one for each: RGB,
@@ -175,13 +162,11 @@ class CleanerCNN(nn.Module):
             x = F.relu(self.enc2(x))
             x = F.relu(self.enc3(x))
             x = F.relu(self.enc4(x))
-            x = F.relu(self.enc5(x))
 
             x = F.relu(self.dec1(x))
             x = F.relu(self.dec2(x))
             x = F.relu(self.dec3(x))
             x = F.relu(self.dec4(x))
-            x = F.relu(self.dec5(x))
         else:
             x = F.leaky_relu(self.conv1(x))
             x = F.leaky_relu(self.conv2(x))
@@ -283,12 +268,12 @@ def validate(model, dataloader, epoch):
             # If finishing the first epoch save the clean and dirty image
             # for example: output/saved_images/clean<epoch#>.png
             if epoch == 0 and i == int((len(val_data)/dataloader.batch_size)-1):
-                save_decoded_image(clean_image.cpu().data, name=f"{image_dir}/clean{epoch}.png")
-                save_decoded_image(dirty_image.cpu().data, name=f"{image_dir}/dirty{epoch}.png")
+                save_image(clean_image.cpu().data, f"{image_dir}/clean{epoch}.png")
+                save_image(dirty_image.cpu().data, f"{image_dir}/dirty{epoch}.png")
             
             # Save the last clean and dirty image pair into outputs directory at the end of each epoch
             if i == int((len(val_data)/dataloader.batch_size)-1):
-                save_decoded_image(outputs.cpu().data, name=f"{image_dir}/cleaned{epoch}.png")
+                save_image(outputs.cpu().data, f"{image_dir}/cleaned{epoch}.png")
         
         # Calculate the average loss for this epoch and return it
         val_loss = running_loss/len(dataloader.dataset)

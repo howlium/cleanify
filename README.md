@@ -36,6 +36,7 @@ The `dirtify` process will create new sibling folders beside raw:
 ##### cleanify
 `cleanify` (by default, applies 40 epochs)</br>
 `cleanify --epochs 100` (you can specify a number of epochs)</br>
+`cleanify --autoencoder` (you can use an Autoencoder NN rather than a vanilla CNN)</br>
 
 The results will appear in a new output folder.
 <pre>

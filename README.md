@@ -17,6 +17,7 @@ You'll need to populate the raw folder with a bunch of source images. In our ini
 ##### dirtify
 To experiment with the Cleanify project, set your working directory to the source folder and run the dirtify tool. Then run the cleanify tool. Here are some examples:
 
+`dirtify --tile --blur 15` (separates source images into tiles, then does a 15-pixel Gaussian blur)</br>  
 `dirtify --jpeg 50` (compresses with JPEG at 50% quality, then decompresses)</br>
 `dirtify --blur 5` (performs a Gaussian blur with a 5-pixel radius)</br>
 `dirtify --noise 25` (renders 25% uniform noise on image)</br>

@@ -216,7 +216,7 @@ def fit(model, dataloader):
 
     # i doesn't get used in this for loop
     # tqdm wraps around an interable to make a progress bar
-    for data in tqdm(dataloader, total=int(len(train_data)/dataloader.batch_size)):
+    for data in tqdm(dataloader, total=len(train_data) // dataloader.batch_size):
         dirty_image = data[0]
         clean_image = data[1]
         dirty_image = dirty_image.to(device)
@@ -260,7 +260,7 @@ def validate(model, dataloader, epoch):
     with torch.no_grad():
 
         # Use the progress bar
-        for i, data in tqdm(enumerate(dataloader), total=int(len(val_data)/dataloader.batch_size)):
+        for i, data in tqdm(enumerate(dataloader), total=len(val_data) // dataloader.batch_size):
             dirty_image = data[0]
             clean_image = data[1]
             dirty_image = dirty_image.to(device)

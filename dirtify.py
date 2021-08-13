@@ -131,7 +131,7 @@ for i, clean in tqdm(enumerate(images), total=len(images)):
     if args.tile:
         raw_tile_h = 512
         raw_tile_w = 512
-        for y, x in itertools.product(range(int(in_h / raw_tile_h)), range(int(in_w / raw_tile_w))):
+        for y, x in itertools.product(range(in_h // raw_tile_h), range(in_w // raw_tile_w)):
             top = y * raw_tile_h
             bottom = top + raw_tile_h
             left = x * raw_tile_w

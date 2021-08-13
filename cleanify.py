@@ -211,7 +211,7 @@ def fit(model, dataloader, epoch):
 
     # i doesn't get used in this for loop
     # tqdm wraps around an interable to make a progress bar
-    for i, data in tqdm(enumerate(dataloader), total=int(len(train_data)/dataloader.batch_size)):
+    for i, data in tqdm(enumerate(dataloader), total=len(train_data) // dataloader.batch_size):
         dirty_image = data[0]
         clean_image = data[1]
         dirty_image = dirty_image.to(device)
@@ -251,7 +251,7 @@ def validate(model, dataloader, epoch):
     with torch.no_grad():
 
         # Use the progress bar
-        for i, data in tqdm(enumerate(dataloader), total=int(len(val_data)/dataloader.batch_size)):
+        for i, data in tqdm(enumerate(dataloader), total = len(val_data) // dataloader.batch_size):
             dirty_image = data[0]
             clean_image = data[1]
             dirty_image = dirty_image.to(device)
@@ -267,12 +267,12 @@ def validate(model, dataloader, epoch):
 
             # If finishing the first epoch save the clean and dirty image
             # for example: output/saved_images/clean<epoch#>.png
-            if epoch == 0 and i == int((len(val_data)/dataloader.batch_size)-1):
+            if epoch == 0 and i == (len(val_data) // dataloader.batch_size)-1:
                 save_image(clean_image.cpu().data, f"{image_dir}/clean.png")
                 save_image(dirty_image.cpu().data, f"{image_dir}/dirty.png")
             
             # Save the last clean and dirty image pair into outputs directory at the end of each epoch
-            if i == int((len(val_data)/dataloader.batch_size)-1):
+            if i == (len(val_data) // dataloader.batch_size)-1:
                 save_image(outputs.cpu().data, f"{image_dir}/cleaned{epoch}.png")
         
         # Calculate the average loss for this epoch and return it

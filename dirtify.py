@@ -6,6 +6,7 @@ from io import StringIO
 import argparse
 import sys
 import random
+import itertools
 
 out_w = 64
 out_h = 64
@@ -63,35 +64,33 @@ if '.DS_Store' in images:
     images.remove('.DS_Store') # For macOS: Skip invisible Desktop Services Store file.
 
 # Dirtify function
-def add_dirt(in_img, w, h):
-
+def add_dirt(img):
+    h,w,d = img.shape[:3]
+    
     if args.invert:
         # Invert the image
-        img = 255 - in_img
+        img = 255 - img
 
     if args.jpeg is not None:
         # Compress with JPEG at given quality, then uncompress
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), args.jpeg]
-        result, jpeg_bytes = cv2.imencode('.jpg', in_img, encode_param)
+        result, jpeg_bytes = cv2.imencode('.jpg', img, encode_param)
         img = cv2.imdecode(jpeg_bytes, cv2.IMREAD_COLOR)
 
     if args.noise is not None:
         # Mix 3 channels of simple noise over the image
-        h, w, d = in_img.shape[0], in_img.shape[1], in_img.shape[2]
         noise_img = np.random.rand(h,w,d) * 255
         mask_img = np.random.rand(h,w,d)
-        for y in range(h):
-            for x in range(w):
-                for c in range(d):
-                    if args.noise <= 100:
-                        alpha = mask_img[y,x,c] * (args.noise / 100.0) # Linear up to 100%
-                    else:
-                        alpha = mask_img[y,x,c] ** (100.0 / args.noise) # Curved above 100%
-                    img[y,x,c] = alpha * noise_img[y,x,c] + (1 - alpha) * in_img[y,x,c]
+        for y, x, c in itertools.product(range(h), range(w), range(d)):
+            if args.noise <= 100:
+                alpha = mask_img[y,x,c] * (args.noise / 100.0) # Linear up to 100%
+            else:
+                alpha = mask_img[y,x,c] ** (100.0 / args.noise) # Curved above 100%
+            img[y,x,c] = alpha * noise_img[y,x,c] + (1 - alpha) * img[y,x,c]
         
     if args.blur is not None:
         # Apply Gaussian Blur with given pixel radius
-        img = cv2.GaussianBlur(in_img, (args.blur, args.blur), 0)
+        img = cv2.GaussianBlur(img, (args.blur, args.blur), 0)
         
     if args.rblur is not None:
         # Apply a radial blur
@@ -104,23 +103,21 @@ def add_dirt(in_img, w, h):
         shrinkMapy = np.abs(np.tile(np.arange(w) - ((np.arange(w) - mid_y) * radius), (h, 1)).transpose().astype(np.float32))
         
         for i in range(args.rblur):
-            tmp1 = cv2.remap(in_img, growMapx, growMapy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
-            tmp2 = cv2.remap(in_img, shrinkMapx, shrinkMapy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            tmp1 = cv2.remap(img, growMapx, growMapy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+            tmp2 = cv2.remap(img, shrinkMapx, shrinkMapy, cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
             img = cv2.addWeighted(tmp1, 0.5, tmp2, 0.5, 0)
     
     if args.plus:
         # superimpose a white plus at a random position
         x = round(random.random() * w)
         y = round(random.random() * h)
-        img = in_img # make a copy so we don't overdraw the clean image
         cv2.line(img, (0,y), (w, y), (255,255,255), 1)
         cv2.line(img, (x,0), (x, h), (255,255,255), 1)
     
     if args.xout:
         # Draw a dark red X through the image
-        img = in_img # make a copy so we don't overdraw the clean image
-        cv2.line(img, (0,0), (w,h), (0,0,64), 2)
-        cv2.line(img, (0,h), (w,0), (0,0,64), 2)
+        cv2.line(img, (0,0), (w,h), (0,0,64), 1)
+        cv2.line(img, (0,h), (w,0), (0,0,64), 1)
     
     return img
 
@@ -128,49 +125,40 @@ def add_dirt(in_img, w, h):
 # Step through images
 for i, clean in tqdm(enumerate(images), total=len(images)):
     filename = f"{raw_dir}/{images[i]}"
-    clean = cv2.imread(filename, cv2.IMREAD_COLOR)
-    
-    # resize and crop to make a 64 x 64 image
-    in_h = clean.shape[0]
-    in_w = clean.shape[1]
+    img = cv2.imread(filename, cv2.IMREAD_COLOR)
+    in_h, in_w = img.shape[:2]
     
     if args.tile:
         raw_tile_h = 512
         raw_tile_w = 512
-        for y in range(int(in_h / raw_tile_h)):
+        for y, x in itertools.product(range(int(in_h / raw_tile_h)), range(int(in_w / raw_tile_w))):
             top = y * raw_tile_h
             bottom = top + raw_tile_h
-            for x in range(int(in_w / raw_tile_w)):
-                left = x * raw_tile_w
-                right = left + raw_tile_w
-                tile = clean[top:bottom, left:right]
-                
-                # Scale from raw tile size to output size
-                scale = out_h / raw_tile_h
-                tile = cv2.resize(tile, None, fx = scale, fy = scale, interpolation = cv2.INTER_AREA)
-
-                # Add that dirt!
-                dirty = add_dirt(tile, out_w, out_h)
-                
-                # And save files
-                out_name = os.path.splitext(images[i])[0] + f" ({x},{y}).png" # Change the extension to png (for lossless image)
-                cv2.imwrite(f"{clean_dir}/{out_name}", tile)
-                cv2.imwrite(f"{dirty_dir}/{out_name}", dirty)
-
+            left = x * raw_tile_w
+            right = left + raw_tile_w
+            tile = img[top:bottom, left:right]
+            
+            # Scale from raw tile size to output size
+            scale = out_h / raw_tile_h
+            tile = cv2.resize(tile, None, fx = scale, fy = scale, interpolation = cv2.INTER_AREA)
+            out_name = os.path.splitext(images[i])[0] + f" ({x},{y}).png" # Change the extension to png (for lossless image)
+            cv2.imwrite(f"{clean_dir}/{out_name}", tile)
+            
+            # Add that dirt!
+            img = add_dirt(tile)
+            cv2.imwrite(f"{dirty_dir}/{out_name}", img)
     else:
+        # resize and crop to make a 64 x 64 image
         scale = max(out_h / in_h, out_w / in_w)
-
-        # resize and crop
         mid_y = scale * in_h / 2
         mid_x = scale * in_w / 2
-        clean = cv2.resize(clean, None, fx = scale, fy = scale, interpolation = cv2.INTER_AREA)
-        clean = clean[round(mid_y - out_h/2):round(mid_y + out_h/2), round(mid_x - out_w/2):round(mid_x + out_w/2)]
+        img = cv2.resize(img, None, fx = scale, fy = scale, interpolation = cv2.INTER_AREA)
+        img = img[round(mid_y - out_h/2):round(mid_y + out_h/2), round(mid_x - out_w/2):round(mid_x + out_w/2)]
+        out_name = os.path.splitext(images[i])[0] + ".png" # Change the extension to png (for lossless image)
+        cv2.imwrite(f"{clean_dir}/{out_name}", img)
 
         # Add that dirt!
-        dirty = add_dirt(clean, out_w, out_h)
-        
-        out_name = os.path.splitext(images[i])[0] + ".png" # Change the extension to png (for lossless image)
-        cv2.imwrite(f"{clean_dir}/{out_name}", clean)
-        cv2.imwrite(f"{dirty_dir}/{out_name}", dirty)
+        img = add_dirt(img)
+        cv2.imwrite(f"{dirty_dir}/{out_name}", img)
     
 print('DONE')

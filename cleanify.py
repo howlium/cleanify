@@ -27,8 +27,8 @@ parser.add_argument("-a", "--autoencoder", action="store_true",
 args = vars(parser.parse_args())
 
 # Make strings for directories
-input_dir  = '../input'
-output_dir = '../output'
+input_dir  = 'input'
+output_dir = 'output'
 image_dir  = output_dir + '/saved_images'
 
 # Make the image directory, if it already exists no FileExistsError will be raised
@@ -268,8 +268,8 @@ def validate(model, dataloader, epoch):
             # If finishing the first epoch save the clean and dirty image
             # for example: output/saved_images/clean<epoch#>.png
             if epoch == 0 and i == int((len(val_data)/dataloader.batch_size)-1):
-                save_image(clean_image.cpu().data, f"{image_dir}/clean{epoch}.png")
-                save_image(dirty_image.cpu().data, f"{image_dir}/dirty{epoch}.png")
+                save_image(clean_image.cpu().data, f"{image_dir}/clean.png")
+                save_image(dirty_image.cpu().data, f"{image_dir}/dirty.png")
             
             # Save the last clean and dirty image pair into outputs directory at the end of each epoch
             if i == int((len(val_data)/dataloader.batch_size)-1):
@@ -317,8 +317,8 @@ plt.plot(val_loss, color='red', label='validation loss')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
-plt.savefig('../output/loss.png')
+plt.savefig('output/loss.png')
 plt.show()
 # save the model to disk
 print('Saving model...')
-torch.save(model.state_dict(), '../output/model.pth')
+torch.save(model.state_dict(), 'output/model.pth')

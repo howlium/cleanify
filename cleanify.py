@@ -73,13 +73,14 @@ print(f"Validation data instances: {len(x_val)}")
 # ToPILImage makes a Pillow image
 transform = transforms.Compose([
     transforms.ToPILImage(),
+    transforms.Resize(256),
     transforms.ToTensor(),
 ])
 
 # CleanDataset class reads in images, applies transforms if entered, and returns them
 # Will do for dirty set, and also clean set if clean_paths is entered
 # In use, it saves as a tensor a pillow image of size 224 x 224
-# and does that to all training and validation sets: original and blurred
+# and does that to all training and validation sets: clean and dirty
 class CleanDataset(Dataset):
     def __init__(self, dirty_paths, clean_paths=None, transforms=None):
         self.X = dirty_paths

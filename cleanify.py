@@ -275,12 +275,12 @@ def validate(model, dataloader, epoch):
 
             # If finishing the first epoch save the clean and dirty image
             # for example: output/saved_images/clean<epoch#>.png
-            if epoch == 0 and i > last - 9:
+            if epoch == 0 and i > last - 5:
                 save_image(clean_image.cpu().data, f"{image_dir}/clean_e{epoch}_i{i}_d{distortion}.png")
                 save_image(dirty_image.cpu().data, f"{image_dir}/dirty_e{epoch}_i{i}_d{distortion}.png")
             
             # Save the last clean and dirty image pair into outputs directory at the end of each epoch
-            if epoch == args['epochs'] - 1 and i > last - 9:
+            if epoch == args['epochs'] - 1 and i > last - 5:
                 save_image(outputs.cpu().data, f"{image_dir}/cleaned_e{epoch}_i{i}_d{distortion}.png")
         
         # Calculate the average loss for this epoch and return it

@@ -45,19 +45,19 @@ if abort:
     sys.exit()
 
 # Directories
-# Given a bunch of larger images in the ../input/raw:
+# Given a bunch of larger images in the input/raw:
 # (1) scale and crop to a small, square, manageable thumbnail size
-# (2) save that into ../input/clean
+# (2) save that into input/clean
 # (3) add the requested perturbation
-# (4) save that into ../input/dirty
+# (4) save that into input/dirty
 
-os.makedirs('../input/dirty', exist_ok=True)
-os.makedirs('../input/clean', exist_ok=True)
-raw_dir = '../input/raw'
-clean_dir = '../input/clean'
-dirty_dir = '../input/dirty'
+os.makedirs('input/dirty', exist_ok=True)
+os.makedirs('input/clean', exist_ok=True)
+raw_dir = 'input/raw'
+clean_dir = 'input/clean'
+dirty_dir = 'input/dirty'
 
-# Iterate through files in ../input/raw
+# Iterate through files in input/raw
 images = os.listdir(raw_dir)
 if '.DS_Store' in images:
     images.remove('.DS_Store') # For macOS: Skip invisible Desktop Services Store file.
@@ -135,8 +135,8 @@ for i, clean in tqdm(enumerate(images), total=len(images)):
     in_w = clean.shape[1]
     
     if args.tile:
-        raw_tile_h = 256
-        raw_tile_w = 256
+        raw_tile_h = 512
+        raw_tile_w = 512
         for y in range(int(in_h / raw_tile_h)):
             top = y * raw_tile_h
             bottom = top + raw_tile_h

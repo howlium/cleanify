@@ -7,6 +7,7 @@ import argparse
 import sys
 import random
 import itertools
+import shutil
 
 out_w = 64
 out_h = 64
@@ -52,11 +53,13 @@ if abort:
 # (3) add the requested perturbation
 # (4) save that into input/dirty
 
-os.makedirs('input/dirty', exist_ok=True)
-os.makedirs('input/clean', exist_ok=True)
-raw_dir = 'input/raw'
 clean_dir = 'input/clean'
+shutil.rmtree(clean_dir)
 dirty_dir = 'input/dirty'
+shutil.rmtree(dirty_dir)
+raw_dir = 'input/raw'
+os.makedirs(clean_dir, exist_ok=True)
+os.makedirs(dirty_dir, exist_ok=True)
 
 # Iterate through files in input/raw
 images = os.listdir(raw_dir)

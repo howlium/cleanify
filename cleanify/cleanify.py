@@ -275,7 +275,7 @@ class Cleaner():
 
                 running_loss += loss.item()
 
-                if i >= (n_iter - 5):
+                if i >= (n_iter - 3):
                     # If finishing the first epoch, save the dirty and
                     # clean images.
                     if epoch == 0:

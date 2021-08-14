@@ -141,3 +141,4 @@ cython_debug/
 input
 output
 source
+cleanify/.vimrc

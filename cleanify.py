@@ -19,17 +19,24 @@ from sklearn.model_selection import train_test_split # Split arrays or matrices 
 
 # Construct the argument parser
 parser = argparse.ArgumentParser()
-parser.add_argument('-e', '--epochs', type=int, default=40,
-            help='number of epochs to train the model for')
+parser.add_argument("-e", "--epochs", type=int, default=40,
+            help="Number of epochs to train the model for")
+parser.add_argument("-t", "--tile", action="store_true",
+            help="Read from the tiled image set instead of the scaled image set")
 parser.add_argument("-a", "--autoencoder", action="store_true",
             help="Use an autoencoder NN instead of a vanilla CNN")
+parser.add_argument("-f", "--fxname", type=str, default=0,
+            help="The name of the distortion effect applied to the images")
+
 # vars returns a _dict_ that is an attribute of the object created by parse_args()
 args = vars(parser.parse_args())
 
+fxName = args['fxname']
+
 # Make strings for directories
-input_dir  = 'input'
-output_dir = 'output'
-image_dir  = output_dir + '/saved_images'
+input_clean_dir  = 'input/clean/tiled' if args['tile'] else 'input/clean/scaled'
+input_dirty_dir  = f'input/dirty/{fxName}/tiled' if args['tile'] else f'input/dirty/{fxName}/scaled'
+image_dir  = f'output/{fxName}'
 
 # Make the image directory, if it already exists no FileExistsError will be raised
 os.makedirs(image_dir, exist_ok=True)
@@ -42,16 +49,14 @@ print(device)
 # Would be nice to change this name cause it's the same as the arg name
 batch_size = 2
 
-# Make a list of the names of the entries in the 'dirty' directory
-dirty_files = os.listdir(f'{input_dir}/dirty')
-
-# Remove .DS_Store and sort the files
+# Make a list of the names of the entries in the 'clean' and 'dirty' directories
 # For macOS: Skip invisible Desktop Services Store file.
+dirty_files = os.listdir(input_dirty_dir)
 if '.DS_Store' in dirty_files:
     dirty_files.remove('.DS_Store') 
 dirty_files.sort()
 
-clean_files = os.listdir(f'{input_dir}/clean')
+clean_files = os.listdir(input_clean_dir)
 if '.DS_Store' in clean_files:
     clean_files.remove('.DS_Store') # For macOS: Skip invisible Desktop Services Store file.
 clean_files.sort()
@@ -91,13 +96,13 @@ class CleanDataset(Dataset):
         return (len(self.X))
     
     def __getitem__(self, i):
-        dirty_image = cv2.imread(f"{input_dir}/dirty/{self.X[i]}")
+        dirty_image = cv2.imread(f"{input_dirty_dir}/{self.X[i]}")
         
         if self.transforms:
             dirty_image = self.transforms(dirty_image)
             
         if self.y is not None:
-            clean_image = cv2.imread(f"{input_dir}/clean/{self.y[i]}")
+            clean_image = cv2.imread(f"{input_clean_dir}/{self.y[i]}")
             clean_image = self.transforms(clean_image)
             return (dirty_image, clean_image)
         else:
@@ -150,9 +155,9 @@ class CleanerCNN(nn.Module):
             # for each pixel of the original (single layer) image for each channel layer.
             # Other parameter for Conv2d() are stride, padding_mode, dilation, groups, and bias.
             # It looks like conv2 is a bottleneck module?
-            self.conv1 = nn.Conv2d(3,  64, kernel_size=9, padding=4, bias=True)
-            self.conv2 = nn.Conv2d(64, 32, kernel_size=1, padding=0, bias=True)
-            self.conv3 = nn.Conv2d(32,  3, kernel_size=5, padding=2)
+            self.conv1 = nn.Conv2d(3,  64, kernel_size=5, padding=2, bias=True)
+            self.conv2 = nn.Conv2d(64, 32, kernel_size=1, padding=0)
+            self.conv3 = nn.Conv2d(32,  3, kernel_size=3, padding=1, bias=True)
             # self.conv3 = nn.Conv2d(32, 16, kernel_size=1, padding=0, bias=True)
             # self.conv4 = nn.Conv2d(16,  3, kernel_size=5, padding=2)
 
@@ -204,7 +209,7 @@ scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
 # This function doesn't use the arg epoch. Can we delete it?
 # Run through all the data once, returning the training loss for the epoch
 # Called once per epoch with the training data set passed in as dataloader
-def fit(model, dataloader, epoch):
+def fit(model, dataloader):
 
     # Set the model in training mode
     model.train()
@@ -212,7 +217,7 @@ def fit(model, dataloader, epoch):
 
     # i doesn't get used in this for loop
     # tqdm wraps around an interable to make a progress bar
-    for i, data in tqdm(enumerate(dataloader), total=len(train_data) // dataloader.batch_size):
+    for data in tqdm(dataloader, total=len(train_data) // dataloader.batch_size):
         dirty_image = data[0]
         clean_image = data[1]
         dirty_image = dirty_image.to(device)
@@ -240,9 +245,13 @@ def fit(model, dataloader, epoch):
     return train_loss
 
 
+
 # How's training going for this epoch
 # Called once per epoch with the validation set passed in as dataloader
 def validate(model, dataloader, epoch):
+    
+    # get the last index
+    last = int((len(val_data)/dataloader.batch_size)-1)
 
     # Set the module in evaluation mode
     model.eval()
@@ -252,7 +261,7 @@ def validate(model, dataloader, epoch):
     with torch.no_grad():
 
         # Use the progress bar
-        for i, data in tqdm(enumerate(dataloader), total = len(val_data) // dataloader.batch_size):
+        for i, data in tqdm(enumerate(dataloader), total=len(val_data) // dataloader.batch_size):
             dirty_image = data[0]
             clean_image = data[1]
             dirty_image = dirty_image.to(device)
@@ -268,13 +277,13 @@ def validate(model, dataloader, epoch):
 
             # If finishing the first epoch save the clean and dirty image
             # for example: output/saved_images/clean<epoch#>.png
-            if epoch == 0 and i == (len(val_data) // dataloader.batch_size)-1:
-                save_image(clean_image.cpu().data, f"{image_dir}/clean.png")
-                save_image(dirty_image.cpu().data, f"{image_dir}/dirty.png")
+            if epoch == 0 and i > last - 5:
+                save_image(clean_image.cpu().data, f"{image_dir}/clean_e{epoch}_i{i}.png")
+                save_image(dirty_image.cpu().data, f"{image_dir}/dirty_e{epoch}_i{i}.png")
             
             # Save the last clean and dirty image pair into outputs directory at the end of each epoch
-            if i == (len(val_data) // dataloader.batch_size)-1:
-                save_image(outputs.cpu().data, f"{image_dir}/cleaned{epoch}.png")
+            if epoch == args['epochs'] - 1 and i > last - 5:
+                save_image(outputs.cpu().data, f"{image_dir}/cleaned_e{epoch}_i{i}.png")
         
         # Calculate the average loss for this epoch and return it
         val_loss = running_loss/len(dataloader.dataset)
@@ -295,7 +304,7 @@ for epoch in range(args['epochs']):
     print(f"Epoch {epoch+1} of {args['epochs']}")
 
     # Train on the clean and dirty images in the training set
-    train_epoch_loss = fit(model, trainloader, epoch)
+    train_epoch_loss = fit(model, trainloader)
 
     # Validate on the clean and dirty images in the validation set
     val_epoch_loss = validate(model, valloader, epoch)

@@ -23,24 +23,36 @@ class CleanDataset(Dataset):
     '''A dataset object that reads images sequentially from one or two
     lists, applying any specified transforms.
 
-    :param clean_dir: Path to directory containing clean input images.
-    :type clean_dir: str
     :param dirty_dir: Path to directory containing dirty input images.
     :type dirty_dir: str
     :param dirty_paths: List of file paths containing dirtified images.
     :type dirty_paths: list
+    :param clean_dir: Path to directory containing clean input images.
+    :type clean_dir: str, optional
     :param clean_paths: List of file paths containing clean images.
     :type clean_paths: list, optional
     :param transform: Transforms to apply to each image.
     :type transform: torchvision.transforms.transforms object,
         optional.
     '''
-    def __init__(self, clean_dir, dirty_dir, dirty_paths, clean_paths=None,
-                 transform=None):
-        self._clean_dir = clean_dir
+    def __init__(self, dirty_dir, dirty_paths, clean_dir=None,
+                 clean_paths=None, transform=None):
         self._dirty_dir = dirty_dir
         self._x = dirty_paths
+
+        if clean_dir is None and clean_paths is not None:
+            raise AssertionError(
+                    'clean_dir must be specified if clean_paths is specified'
+            )
+
+        if clean_dir is not None and clean_paths is None:
+            raise AssertionError(
+                    'clean_paths must be specified if clean_dir is specified'
+            )
+
+        self._clean_dir = clean_dir
         self._y = clean_paths
+
         self._transform = transform
          
     def __len__(self):
@@ -168,17 +180,11 @@ class Cleaner():
         print(f'Train data instances: {len(x_train)}')
         print(f'Validation data instances: {len(x_val)}')
 
-        # Use Torchvision Compose() to combine transforms into one call.
-        # ToPILImage makes a Pillow image.
-        transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(256),
-            transforms.ToTensor(),
-        ])
-        train_data = CleanDataset(self._input_clean_dir, self._input_dirty_dir,
-                                  x_train, y_train, transform)
-        val_data = CleanDataset(self._input_clean_dir, self._input_dirty_dir,
-                                x_val, y_val, transform)
+        transform = transforms.ToTensor(),
+        train_data = CleanDataset(self._input_dirty_dir, x_train,
+                                  self._input_clean_dir, y_train, transform)
+        val_data = CleanDataset(self._input_dirty_dir, x_val,
+                                self._input_clean_dir, y_val, transform)
 
         # Load the training and validation datasets, and shuffle.
         # Each dataset has a batch size of 2: one for original the other
@@ -287,7 +293,7 @@ class Cleaner():
                         save_image(
                                 clean_image.cpu().data,
                                 f'{self._output_dir}/clean_e{epoch}_i{i}'
-                                + f'_{self._fx_name}.png'
+                                + f'_d{self._fx_name}.png'
                         )
 
                     # Save the last clean and dirty image pair into
@@ -295,7 +301,8 @@ class Cleaner():
                     if epoch == (self._epochs - 1):
                         save_image(
                                 outputs.cpu().data,
-                                f'{self._output_dir}/cleaned_e{epoch}_i{i}.png'
+                                f'{self._output_dir}/cleaned_e{epoch}_i{i}'
+                                + f'_d{self._fx_name}.png'
                         )
         
             # Calculate the average loss for this epoch and return it

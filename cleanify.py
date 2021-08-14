@@ -21,13 +21,16 @@ from sklearn.model_selection import train_test_split # Split arrays or matrices 
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--epochs', type=int, default=40,
             help='number of epochs to train the model for')
-parser.add_argument("-a", "--autoencoder", action="store_true",
-            help="Use an autoencoder NN instead of a vanilla CNN")
+parser.add_argument('-a', '--autoencoder', action='store_true',
+            help='Use an autoencoder NN instead of a vanilla CNN')
+parser.add_argument('-t', '--tile', action='store_true',
+            help='read from the tiled image set instead of the scaled image set')
 # vars returns a _dict_ that is an attribute of the object created by parse_args()
 args = vars(parser.parse_args())
 
 # Make strings for directories
-input_dir  = 'input'
+input_clean_dir  = 'input/clean/tiled' if args['tile'] else 'input/clean/scaled'
+input_dirty_dir  = 'input/dirty/tiled' if args['tile'] else 'input/dirty/scaled'
 output_dir = 'output'
 image_dir  = output_dir + '/saved_images'
 
@@ -42,16 +45,14 @@ print(device)
 # Would be nice to change this name cause it's the same as the arg name
 batch_size = 2
 
-# Make a list of the names of the entries in the 'dirty' directory
-dirty_files = os.listdir(f'{input_dir}/dirty')
-
-# Remove .DS_Store and sort the files
+# Make a list of the names of the entries in the 'clean' and 'dirty' directories
 # For macOS: Skip invisible Desktop Services Store file.
+dirty_files = os.listdir(input_dirty_dir)
 if '.DS_Store' in dirty_files:
     dirty_files.remove('.DS_Store') 
 dirty_files.sort()
 
-clean_files = os.listdir(f'{input_dir}/clean')
+clean_files = os.listdir(input_clean_dir)
 if '.DS_Store' in clean_files:
     clean_files.remove('.DS_Store') # For macOS: Skip invisible Desktop Services Store file.
 clean_files.sort()
@@ -91,13 +92,13 @@ class CleanDataset(Dataset):
         return (len(self.X))
     
     def __getitem__(self, i):
-        dirty_image = cv2.imread(f"{input_dir}/dirty/{self.X[i]}")
+        dirty_image = cv2.imread(f"{input_dirty_dir}/{self.X[i]}")
         
         if self.transforms:
             dirty_image = self.transforms(dirty_image)
             
         if self.y is not None:
-            clean_image = cv2.imread(f"{input_dir}/clean/{self.y[i]}")
+            clean_image = cv2.imread(f"{input_clean_dir}/{self.y[i]}")
             clean_image = self.transforms(clean_image)
             return (dirty_image, clean_image)
         else:

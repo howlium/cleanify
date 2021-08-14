@@ -180,13 +180,7 @@ class Cleaner():
         print(f'Train data instances: {len(x_train)}')
         print(f'Validation data instances: {len(x_val)}')
 
-        # Use Torchvision Compose() to combine transforms into one call.
-        # ToPILImage makes a Pillow image.
-        transform = transforms.Compose([
-            transforms.ToPILImage(),
-            transforms.Resize(256),
-            transforms.ToTensor(),
-        ])
+        transform = transforms.ToTensor(),
         train_data = CleanDataset(self._input_dirty_dir, x_train,
                                   self._input_clean_dir, y_train, transform)
         val_data = CleanDataset(self._input_dirty_dir, x_val,

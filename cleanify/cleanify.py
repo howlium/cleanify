@@ -275,7 +275,7 @@ class Cleaner():
 
                 running_loss += loss.item()
 
-                if i >= (n_iter - 5):
+                if i >= (n_iter - 3):
                     # If finishing the first epoch, save the dirty and
                     # clean images.
                     if epoch == 0:
@@ -287,7 +287,7 @@ class Cleaner():
                         save_image(
                                 clean_image.cpu().data,
                                 f'{self._output_dir}/clean_e{epoch}_i{i}'
-                                + f'_{self._fx_name}.png'
+                                + f'_d{self._fx_name}.png'
                         )
 
                     # Save the last clean and dirty image pair into
@@ -295,7 +295,7 @@ class Cleaner():
                     if epoch == (self._epochs - 1):
                         save_image(
                                 outputs.cpu().data,
-                                f'{self._output_dir}/cleaned_e{epoch}_i{i}.png'
+                                f'{self._output_dir}/cleaned_e{epoch}_i{i}._d{self._fx_name}.png'
                         )
         
             # Calculate the average loss for this epoch and return it

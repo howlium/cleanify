@@ -47,19 +47,19 @@ if abort:
 # Define directories
 clean_dir = 'input/clean'
 clean_tiled_dir = clean_dir + '/tiled'
-os.makedirs(clean_tiled_dir, exist_ok=True)
 shutil.rmtree(clean_tiled_dir)
+os.makedirs(clean_tiled_dir, exist_ok=True)
 clean_scaled_dir = clean_dir + '/scaled'
-os.makedirs(clean_scaled_dir, exist_ok=True)
 shutil.rmtree(clean_scaled_dir)
+os.makedirs(clean_scaled_dir, exist_ok=True)
 
 dirty_dir = 'input/dirty'
 dirty_tiled_dir = dirty_dir + '/tiled'
-os.makedirs(dirty_tiled_dir, exist_ok=True)
 shutil.rmtree(dirty_tiled_dir)
+os.makedirs(dirty_tiled_dir, exist_ok=True)
 dirty_scaled_dir = dirty_dir + '/scaled'
-os.makedirs(dirty_scaled_dir, exist_ok=True)
 shutil.rmtree(dirty_scaled_dir)
+os.makedirs(dirty_scaled_dir, exist_ok=True)
 
 raw_dir = 'input/raw'
 

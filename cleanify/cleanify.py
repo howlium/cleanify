@@ -23,9 +23,10 @@ class CleanDataset(Dataset):
     '''A dataset object that reads images sequentially from one or two
     lists, applying any specified transforms.
 
-    :param input_dir: Path to directory containing input images. The
-        input_dir must contain subdirectories `dirty` and `clean`.
-    :type input_dir: str
+    :param clean_dir: Path to directory containing clean input images.
+    :type clean_dir: str
+    :param dirty_dir: Path to directory containing dirty input images.
+    :type dirty_dir: str
     :param dirty_paths: List of file paths containing dirtified images.
     :type dirty_paths: list
     :param clean_paths: List of file paths containing clean images.
@@ -34,9 +35,10 @@ class CleanDataset(Dataset):
     :type transform: torchvision.transforms.transforms object,
         optional.
     '''
-    def __init__(self, input_dir, dirty_paths, clean_paths=None,
+    def __init__(self, clean_dir, dirty_dir, dirty_paths, clean_paths=None,
                  transform=None):
-        self._input_dir = input_dir
+        self._clean_dir = clean_dir
+        self._dirty_dir = dirty_dir
         self._x = dirty_paths
         self._y = clean_paths
         self._transform = transform
@@ -45,13 +47,13 @@ class CleanDataset(Dataset):
         return len(self._x)
     
     def __getitem__(self, i):
-        dirty_image = cv2.imread(f"{self._input_dir}/dirty/{self._x[i]}")
+        dirty_image = cv2.imread(f"{self._dirty_dir}/{self._x[i]}")
         
         if self._transform is not None:
             dirty_image = self._transform(dirty_image)
             
         if self._y is not None:
-            clean_image = cv2.imread(f"{self._input_dir}/clean/{self._y[i]}")
+            clean_image = cv2.imread(f"{self._clean_dir}/{self._y[i]}")
             if self._transform is not None:
                 clean_image = self._transform(clean_image)
             return (dirty_image, clean_image)
@@ -65,24 +67,26 @@ class CleanerConvAE(nn.Module):
         '''Constructor method.'''
         super(CleanerConvAE, self).__init__()
 
-        self.enc = [
-            nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3),
-            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3),
-            nn.Conv2d(in_channels=32, out_channels=3, kernel_size=3),
-        ]
+        # At least one of parameter of the CleanerConvAE object must be
+        # a non-list, due to a quirk of the optimizer. So we name each of
+        # them instead of creating anonymous nn.Conv2d objects.
+        self._enc1 = nn.Conv2d(3,  64, kernel_size=3)
+        self._enc2 = nn.Conv2d(64, 32, kernel_size=3)
+        self._enc3 = nn.Conv2d(32,  3, kernel_size=3)
+        self._enc_list = [self._enc1, self._enc2, self._enc3]
 
-        self.dec = [
-            nn.ConvTranspose2d(in_channels=3, out_channels=32, kernel_size=3),
-            nn.ConvTranspose2d(in_channels=32, out_channels=64, kernel_size=3),
-            nn.ConvTranspose2d(in_channels=64, out_channels=3, kernel_size=3),
-        ]
+        self._dec1 = nn.ConvTranspose2d(3,  32, kernel_size=3)
+        self._dec2 = nn.ConvTranspose2d(32, 64, kernel_size=3)
+        self._dec3 = nn.ConvTranspose2d(64,  3, kernel_size=3)
+        self._dec_list = [self._dec1, self._dec2, self._dec3]
 
+  
     def forward(self, x):
         '''Overrides nn.Module.forward.'''
-        for enc in self.enc:
+        for enc in self._enc_list:
             x = F.relu(enc(x))
 
-        for enc in self.dec:
+        for dec in self._dec_list:
             x = F.relu(dec(x))
 
         return x
@@ -94,12 +98,12 @@ class CleanerCNN(nn.Module):
         '''Constructor method.'''
         super(CleanerCNN, self).__init__()
 
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=9,
-                               padding=4, bias=True)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=5,
+                               padding=2, bias=True)
         self.conv2 = nn.Conv2d(in_channels=64, out_channels=32, kernel_size=1,
-                               padding=0, bias=True)
-        self.conv3 = nn.Conv2d(in_channels=32, out_channels=3, kernel_size=5,
-                               padding=2)
+                               padding=0)
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=3, kernel_size=3,
+                               padding=1, bias=True)
 
 
     def forward(self, x):
@@ -119,23 +123,38 @@ class Cleaner():
 
     :param epochs: Number of epochs for which to train the cleaner.
     :type epochs: int, optional
+    :param tiled: If True, read from the tiled image set. Else, read from
+        the scaled image set.
+    :type tiled: bool, optional
     :param use_autoencoder: Whether to use a convolutional autoencoder
         rather than a plain CNN.
     :type use_autoencoder: bool, optional
+    :param fx_name: Name of the distortion effect applied to the images.
+    :type fx_name: str, optional
     '''
-    def __init__(self, epochs=40, use_autoencoder=False):
+    def __init__(self, epochs=40, tiled=False, use_autoencoder=False,
+                 fx_name="null"):
         '''Constructor method.'''
         self._epochs = epochs
+        self._tiled = tiled
         self._use_autoencoder = use_autoencoder
+        self._fx_name = fx_name
 
-        self._input_dir = 'input'
-        self._output_dir = 'output'
+        if self._tiled:
+            self._input_clean_dir = os.path.join('input', 'clean', 'tiled')
+            self._input_dirty_dir = os.path.join('input', 'dirty',
+                                                 self._fx_name, 'tiled')
+        else:
+            self._input_clean_dir = os.path.join('input', 'clean', 'scaled')
+            self._input_dirty_dir = os.path.join('input', 'dirty',
+                                                 self._fx_name, 'scaled')
+        self._output_dir = os.path.join('output', self._fx_name)
         os.makedirs(self._output_dir, exist_ok=True)
 
         self._device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-        dirty_files = os.listdir(f'{self._input_dir}/dirty')
-        clean_files = os.listdir(f'{self._input_dir}/clean')
+        dirty_files = os.listdir(f'{self._input_dirty_dir}')
+        clean_files = os.listdir(f'{self._input_clean_dir}')
         for file_list in [dirty_files, clean_files]:
             # For macOS: Skip invisible Desktop Services Store file.
             if '.DS_Store' in file_list:
@@ -156,8 +175,10 @@ class Cleaner():
             transforms.Resize(256),
             transforms.ToTensor(),
         ])
-        train_data = CleanDataset(self._input_dir, x_train, y_train, transform)
-        val_data = CleanDataset(self._input_dir, x_val, y_val, transform)
+        train_data = CleanDataset(self._input_clean_dir, self._input_dirty_dir,
+                                  x_train, y_train, transform)
+        val_data = CleanDataset(self._input_clean_dir, self._input_dirty_dir,
+                                x_val, y_val, transform)
 
         # Load the training and validation datasets, and shuffle.
         # Each dataset has a batch size of 2: one for original the other
@@ -239,8 +260,7 @@ class Cleaner():
         with torch.no_grad():
             n_iter = len(self._valloader.dataset) // self._valloader.batch_size
 
-            data = None
-            for data in tqdm(self._valloader, total=n_iter):
+            for i, data in tqdm(enumerate(self._valloader), total=n_iter):
                 dirty_image = data[0].to(self._device)
                 clean_image = data[1].to(self._device)
 
@@ -251,19 +271,28 @@ class Cleaner():
 
                 running_loss += loss.item()
 
-            # If finishing the first epoch, save the dirty and clean
-            # images.
-            # For example: output/saved_images/clean<epoch#>.png
-            if data is not None:
-                if epoch == 0:
-                    save_image(dirty_image.cpu().data,
-                               f'{self._output_dir}/dirty.png')
-                    save_image(clean_image.cpu().data,
-                               f'{self._output_dir}/clean.png')
+                if i >= (n_iter - 5):
+                    # If finishing the first epoch, save the dirty and
+                    # clean images.
+                    if epoch == 0:
+                        save_image(
+                                dirty_image.cpu().data,
+                                f'{self._output_dir}/dirty_e{epoch}_i{i}'
+                                + f'_d{self._fx_name}.png'
+                        )
+                        save_image(
+                                clean_image.cpu().data,
+                                f'{self._output_dir}/clean_e{epoch}_i{i}'
+                                + f'_{self._fx_name}.png'
+                        )
 
-                # Save the last clean and dirty image pair into outputs directory at the end of each epoch
-                save_image(outputs.cpu().data,
-                           f'{self._output_dir}/cleaned{epoch}.png')
+                    # Save the last clean and dirty image pair into
+                    # outputs directory at the end of the final epoch.
+                    if epoch == (self._epochs - 1):
+                        save_image(
+                                outputs.cpu().data,
+                                f'{self._output_dir}/cleaned_e{epoch}_i{i}.png'
+                        )
         
             # Calculate the average loss for this epoch and return it
             val_loss = running_loss / len(self._valloader.dataset)

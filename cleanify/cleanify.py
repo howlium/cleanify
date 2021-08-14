@@ -189,6 +189,10 @@ class Cleaner():
         self._valloader = DataLoader(val_data, batch_size=batch_size,
                                      shuffle=False)
 
+        # Loss values at the end of the most recent training run
+        self._last_train_loss = 0.0
+        self._last_val_loss = 0.0
+
         # to() moves and/or casts the parameters and buffers.
         # device is cuda:0 or cpu.
         # Returns self.
@@ -331,6 +335,9 @@ class Cleaner():
         end = time.time()
         print(f'Took {((end - start) / 60):.3f} minutes to train')
 
+        self._last_train_loss = train_loss[-1]
+        self._last_val_loss = val_loss[-1]
+
         # Plot results
         plt.figure(figsize=(10, 7))
         plt.plot(train_loss, color='orange', label='train loss')
@@ -343,3 +350,15 @@ class Cleaner():
 
         print('Saving model...')
         torch.save(self._model.state_dict(), 'output/model.pth')
+
+
+    def get_train_loss(self):
+        '''Returns the training loss from the end of the last training
+        run.'''
+        return self._last_train_loss
+
+
+    def get_val_loss(self):
+        '''Returns the validation loss from the end of the last training
+        run.'''
+        return self._last_val_loss

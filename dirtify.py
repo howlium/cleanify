@@ -141,11 +141,9 @@ for i, clean in tqdm(enumerate(images), total=len(images)):
     clean_img = cv2.resize(raw_img, None, fx = scale, fy = scale, interpolation = cv2.INTER_AREA)
     out_img = clean_img[round(mid_y - out_h/2):round(mid_y + out_h/2), round(mid_x - out_w/2):round(mid_x + out_w/2)]
     out_name = out_name_base + ".png" # Change the extension to png (for lossless image)
-    print (f"Writing {clean_scaled_dir}/{out_name}")
     cv2.imwrite(f"{clean_scaled_dir}/{out_name}", out_img)
     # Add that dirt!
     out_img = add_dirt(out_img)
-    print (f"Writing {dirty_scaled_dir}/{out_name}")
     cv2.imwrite(f"{dirty_scaled_dir}/{out_name}", out_img)
     
     # Now do the tiled set: export 2x3 or 3x2 512x512-pixel tiles from each 1536x2048 or 2048x1536 raw image
@@ -162,11 +160,9 @@ for i, clean in tqdm(enumerate(images), total=len(images)):
         
         tile = cv2.resize(tile, None, fx = scale, fy = scale, interpolation = cv2.INTER_AREA)
         out_name = out_name_base + f" ({x},{y}).png" # Change the extension to png (for lossless image)
-        print (f"Writing {clean_tiled_dir}/{out_name}")
         cv2.imwrite(f"{clean_tiled_dir}/{out_name}", tile)
         # Add that dirt!
         out_img = add_dirt(tile)
-        print (f"Writing {dirty_tiled_dir}/{out_name}")
         cv2.imwrite(f"{dirty_tiled_dir}/{out_name}", out_img)
 
 print('DONE')

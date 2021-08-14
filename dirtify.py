@@ -44,7 +44,32 @@ if args.noise is not None and (args.noise < 0 or args.noise > 400):
 if abort:
     sys.exit()
 
-# Define directories
+# find the right folder name for this effect
+def append_names(str1, str2):
+    if str1=='':
+        return str2
+    else:
+        return f'{str1}-{str2}'
+
+fxName = ''
+if args.jpeg is not None:
+    fxName = append_names(fxName, 'jpeg'+str(args.jpeg))
+if args.blur is not None:
+    fxName = append_names(fxName, 'blur'+str(args.blur))
+if args.rblur:
+    fxName = append_names(fxName, 'rblur')
+if args.noise is not None:
+    fxName = append_names(fxName, 'noise'+str(args.noise))
+if args.xout:
+    fxName = append_names(fxName, 'xout')
+if args.plus:
+    fxName = append_names(fxName, 'plus')
+if args.invert:
+    fxName = append_names(fxName, 'invert')
+if fxName == '':
+    fxName = 'null'
+
+# define directories
 clean_dir = 'input/clean'
 clean_tiled_dir = clean_dir + '/tiled'
 shutil.rmtree(clean_tiled_dir, ignore_errors=True)
@@ -54,10 +79,10 @@ shutil.rmtree(clean_scaled_dir, ignore_errors=True)
 os.makedirs(clean_scaled_dir, exist_ok=True)
 
 dirty_dir = 'input/dirty'
-dirty_tiled_dir = dirty_dir + '/tiled'
+dirty_tiled_dir = f'{dirty_dir}/{fxName}/tiled'
 shutil.rmtree(dirty_tiled_dir, ignore_errors=True)
 os.makedirs(dirty_tiled_dir, exist_ok=True)
-dirty_scaled_dir = dirty_dir + '/scaled'
+dirty_scaled_dir = f'{dirty_dir}/{fxName}/scaled'
 shutil.rmtree(dirty_scaled_dir, ignore_errors=True)
 os.makedirs(dirty_scaled_dir, exist_ok=True)
 

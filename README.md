@@ -23,13 +23,16 @@ The `dirtify` process will create new sibling folders beside raw:
 ├────dirtify.py
 └─┬──input
   ├────raw
-  ├─┬──clean
-  | ├────tiled ⟸ tiled clean images
-  | └────scaled ⟸ scaled clean images
+  ├────clean
   └─┬──dirty
-    ├────tiled ⟸ tiled dirty images
-    └────scaled ⟸ scaled dirty images
-    </pre>
+    ├─┬──jpeg
+    | ├────tiled  ⟸ tiled images with jpeg
+    | └────scaled ⟸ scaled images with jpeg
+    ├─┬──blur
+    | ├────tiled  ⟸ tiled images with blur
+    | └────scaled ⟸ scaled images with blur
+    ... etc
+</pre>
 
 ##### cleanify
 `cleanify` (by default, applies 40 epochs)</br>
@@ -42,11 +45,11 @@ The results will appear in a new output folder.
 ├────cleanify.py
 ├────dirtify.py
 ├─┬──input
-| ├────raw
-| ├────clean
-| └────dirty
+| ...
 └─┬──output
-  └────saved_images ⟸ scaled validation results
+  ├────jpeg ⟸ output for jpeg effect
+  ├────blur ⟸ output for blur effect
+  ... etc
 </pre>
 
 ### History

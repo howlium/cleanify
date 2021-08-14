@@ -25,19 +25,18 @@ parser.add_argument("-t", "--tile", action="store_true",
             help="Read from the tiled image set instead of the scaled image set")
 parser.add_argument("-a", "--autoencoder", action="store_true",
             help="Use an autoencoder NN instead of a vanilla CNN")
-parser.add_argument("-d", "--distortion", type=int, default=0,
-            help="The type of distortion applied to the images")
+parser.add_argument("-f", "--fxname", type=str, default=0,
+            help="The name of the distortion effect applied to the images")
 
 # vars returns a _dict_ that is an attribute of the object created by parse_args()
 args = vars(parser.parse_args())
 
-distortion = args['distortion']
+fxName = args['fxname']
 
 # Make strings for directories
 input_clean_dir  = 'input/clean/tiled' if args['tile'] else 'input/clean/scaled'
-input_dirty_dir  = 'input/dirty/tiled' if args['tile'] else 'input/dirty/scaled'
-output_dir = 'output'
-image_dir  = output_dir + '/saved_images_%i' % distortion
+input_dirty_dir  = f'input/dirty/{fxName}/tiled' if args['tile'] else f'input/dirty/{fxName}/scaled'
+image_dir  = f'output/{fxName}'
 
 # Make the image directory, if it already exists no FileExistsError will be raised
 os.makedirs(image_dir, exist_ok=True)
@@ -279,12 +278,12 @@ def validate(model, dataloader, epoch):
             # If finishing the first epoch save the clean and dirty image
             # for example: output/saved_images/clean<epoch#>.png
             if epoch == 0 and i > last - 5:
-                save_image(clean_image.cpu().data, f"{image_dir}/clean_e{epoch}_i{i}_d{distortion}.png")
-                save_image(dirty_image.cpu().data, f"{image_dir}/dirty_e{epoch}_i{i}_d{distortion}.png")
+                save_image(clean_image.cpu().data, f"{image_dir}/clean_e{epoch}_i{i}.png")
+                save_image(dirty_image.cpu().data, f"{image_dir}/dirty_e{epoch}_i{i}.png")
             
             # Save the last clean and dirty image pair into outputs directory at the end of each epoch
             if epoch == args['epochs'] - 1 and i > last - 5:
-                save_image(outputs.cpu().data, f"{image_dir}/cleaned_e{epoch}_i{i}_d{distortion}.png")
+                save_image(outputs.cpu().data, f"{image_dir}/cleaned_e{epoch}_i{i}.png")
         
         # Calculate the average loss for this epoch and return it
         val_loss = running_loss/len(dataloader.dataset)
